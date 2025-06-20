@@ -3,6 +3,7 @@ import "./App.css";
 
 function App() {
   const [open, setOpen] = useState(false);
+  const [userId, setUserId] = useState("0C63CA33-9FF9-4B5E-8F6E-0ABBD4B4FE1D");
 
   const getUrl = () => {
     fetch("https://stage-platform-protocols.kgen.io/s2s/session", {
@@ -12,9 +13,7 @@ function App() {
         "x-client-secret": "f3mm1OKppwdfd7Wtu2F8YMCwlOWOXH680kPmEzP02d",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        user_id: "0C63CA33-9FF9-4B5E-8F6E-0ABBD4B4FE1D",
-      }),
+      body: JSON.stringify({ user_id: userId }),
     })
       .then((response) => response.json())
       .then((data) => setOpen(data.token))
@@ -23,7 +22,27 @@ function App() {
 
   return (
     <>
-      {!open && <button onClick={() => getUrl()}>redeem</button>}
+      {!open && (
+        <>
+          <input
+            onChange={(e) => {
+              setUserId(e.currentTarget.value);
+            }}
+            value={userId}
+            style={{
+              width: 400,
+              height: 52,
+              marginRight: 16,
+              padding: 0,
+              paddingLeft: 10,
+            }}
+          />
+          <button onClick={() => getUrl()} style={{ height: 56 }}>
+            redeem
+          </button>
+        </>
+      )}
+
       {open && (
         <iframe
           src={`http://localhost:3000?sessionToken=${open}`}
