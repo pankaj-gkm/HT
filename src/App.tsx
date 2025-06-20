@@ -45,7 +45,7 @@ function App() {
 
       {open && (
         <iframe
-          src={`http://localhost:3000?sessionToken=${open}`}
+          src={`https://stage.kstore.global?sessionToken=${open}`}
           style={{ width: "100vw", height: "100vh", border: "none" }}
         />
       )}
