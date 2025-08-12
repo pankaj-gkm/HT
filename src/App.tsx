@@ -1,5 +1,7 @@
 // @ts-expect-error no declaration file
 import CryptoJS from "crypto-js";
+import { valid } from "uuid4";
+
 import { useState } from "react";
 import "./App.css";
 
@@ -20,12 +22,13 @@ const getEncryptedToken = (token: string) => {
 
 function App() {
   const [open, setOpen] = useState(false);
-  const [userId, setUserId] = useState("0C63CA33-9FF9-4B5E-8F6E-0ABBD4B4FE1D");
+  const [userId, setUserId] = useState("0c63ca33-9ff9-4b5e-8f6e-0abbd4b4fe1d");
   const [sessionToken, setSessionToken] = useState();
 
   const [showHeader, setShowHeader] = useState(false);
   const [continueCtaTitle, setContinueCtaTitle] =
     useState<string>("Continue Reading");
+
   const [continueCtaRedirectionUrl, setContinueCtaRedirectionUrl] =
     useState<string>("https://www.hindustantimes.com/sports");
 
@@ -44,6 +47,9 @@ function App() {
       .catch((error) => console.error("Error:", error));
   };
 
+  const isValidUserId = valid(userId);
+
+  // const baseUrl = "http://localhost:3001/voucher/book-my-show";
   const baseUrl = "https://stage.kstore.global/voucher/book-my-show";
   const storeIdentifier = "ht-kstore-india";
 
@@ -121,6 +127,7 @@ function App() {
         <input
           onChange={(e) => {
             setUserId(e.currentTarget.value);
+            setSessionToken(undefined);
           }}
           value={userId}
           style={{
@@ -129,6 +136,7 @@ function App() {
             marginRight: 16,
             padding: 0,
             paddingLeft: 10,
+            outlineColor: isValidUserId ? "white" : "red",
           }}
         />
         <button onClick={() => getUrl()} style={{ height: 56, width: 160 }}>
@@ -205,7 +213,8 @@ function App() {
             !continueCtaRedirectionUrl ||
             !continueCtaTitle ||
             !continueCtaTitle ||
-            !sessionToken
+            !sessionToken ||
+            !isValidUserId
           }
           onClick={() => setOpen(true)}
         >
