@@ -1,6 +1,5 @@
 // @ts-expect-error no declaration file
 import CryptoJS from "crypto-js";
-import { valid } from "uuid4";
 
 import { useState } from "react";
 import "./App.css";
@@ -46,8 +45,6 @@ function App() {
       .then((data) => setSessionToken(getEncryptedToken(data.token)))
       .catch((error) => console.error("Error:", error));
   };
-
-  const isValidUserId = valid(userId);
 
   // const baseUrl = "http://localhost:3001/voucher/book-my-show";
   const baseUrl = "https://stage.kstore.global/voucher/book-my-show";
@@ -136,7 +133,6 @@ function App() {
             marginRight: 16,
             padding: 0,
             paddingLeft: 10,
-            outlineColor: isValidUserId ? "white" : "red",
           }}
         />
         <button onClick={() => getUrl()} style={{ height: 56, width: 160 }}>
@@ -213,8 +209,7 @@ function App() {
             !continueCtaRedirectionUrl ||
             !continueCtaTitle ||
             !continueCtaTitle ||
-            !sessionToken ||
-            !isValidUserId
+            !sessionToken
           }
           onClick={() => setOpen(true)}
         >
