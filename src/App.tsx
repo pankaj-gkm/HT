@@ -31,6 +31,9 @@ function App() {
   const [continueCtaRedirectionUrl, setContinueCtaRedirectionUrl] =
     useState<string>("https://www.hindustantimes.com/sports");
 
+  const [orderHistoryRedirectionUrl, setOrderHistoryRedirectionUrl] =
+    useState<string>("https://www.hindustantimes.com/order-history");
+
   const getUrl = () => {
     fetch("https://stage-platform-protocols.kgen.io/s2s/session", {
       method: "POST",
@@ -46,26 +49,27 @@ function App() {
       .catch((error) => console.error("Error:", error));
   };
 
-  // const baseUrl = "http://localhost:3001/voucher/book-my-show";
-  const baseUrl = "https://stage.kstore.global/voucher/book-my-show";
+  const baseUrl = "http://localhost:3000/voucher/book-my-show";
+  // const baseUrl = "https://stage.kstore.global/voucher/book-my-show";
   const storeIdentifier = "ht-kstore-india";
+
+  const params = {
+    showHeader,
+    storeIdentifier: encodeURIComponent(storeIdentifier),
+    continueCtaTitle: continueCtaTitle
+      ? encodeURIComponent(continueCtaTitle)
+      : undefined,
+    continueCtaRedirectionUrl: continueCtaRedirectionUrl
+      ? encodeURIComponent(continueCtaRedirectionUrl)
+      : undefined,
+    orderHistoryRedirectionUrl: orderHistoryRedirectionUrl
+      ? encodeURIComponent(orderHistoryRedirectionUrl)
+      : undefined,
+    sessionToken: sessionToken ? encodeURIComponent(sessionToken) : undefined,
+  };
 
   function highlightSearchParams(url: string): string {
     try {
-      const params = {
-        showHeader,
-        storeIdentifier: encodeURIComponent(storeIdentifier),
-        continueCtaTitle: continueCtaTitle
-          ? encodeURIComponent(continueCtaTitle)
-          : undefined,
-        continueCtaRedirectionUrl: continueCtaRedirectionUrl
-          ? encodeURIComponent(continueCtaRedirectionUrl)
-          : undefined,
-        sessionToken: sessionToken
-          ? encodeURIComponent(sessionToken)
-          : undefined,
-      };
-
       const highlightedParams = Object.entries(params)
         .filter(([, value]) => typeof value !== "undefined")
         .map(
@@ -81,18 +85,6 @@ function App() {
   }
 
   function getRedirectUrl(): string {
-    const params: Record<string, string | boolean | undefined> = {
-      showHeader,
-      storeIdentifier: encodeURIComponent(storeIdentifier),
-      continueCtaTitle: continueCtaTitle
-        ? encodeURIComponent(continueCtaTitle)
-        : undefined,
-      continueCtaRedirectionUrl: continueCtaRedirectionUrl
-        ? encodeURIComponent(continueCtaRedirectionUrl)
-        : undefined,
-      sessionToken: sessionToken ? encodeURIComponent(sessionToken) : undefined,
-    };
-
     const query = Object.entries(params)
       .filter(([, value]) => typeof value !== "undefined")
       .map(([key, value]) => `${key}=${value}`)
@@ -163,6 +155,16 @@ function App() {
             type="text"
             value={continueCtaRedirectionUrl}
             onChange={(e) => setContinueCtaRedirectionUrl(e.target.value)}
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ ...groupStyle, flex: 2 }}>
+          <label style={labelStyle}>Order History Redirection Url</label>
+          <input
+            type="text"
+            value={orderHistoryRedirectionUrl}
+            onChange={(e) => setOrderHistoryRedirectionUrl(e.target.value)}
             style={inputStyle}
           />
         </div>
