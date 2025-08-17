@@ -49,8 +49,8 @@ function App() {
       .catch((error) => console.error("Error:", error));
   };
 
-  const baseUrl = "http://localhost:3000/voucher/book-my-show";
-  // const baseUrl = "https://stage.kstore.global/voucher/book-my-show";
+  // const baseUrl = "http://localhost:3000/voucher/book-my-show";
+  const baseUrl = "https://stage.kstore.global/voucher/book-my-show";
   const storeIdentifier = "ht-kstore-india";
 
   const params = {
