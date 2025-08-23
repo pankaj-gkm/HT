@@ -137,6 +137,8 @@ function App() {
     getUrl(user);
   };
 
+  const disableCreateSession = !values.tokenSecret || !values.tokenId;
+
   if (open) {
     return (
       <iframe
@@ -160,12 +162,14 @@ function App() {
           <button
             type="button"
             onClick={onSetUserId}
+            disabled={disableCreateSession}
             style={{ height: 56, width: 56, transform: "translateY(2px)" }}
           >
             <RefreshIcon />
           </button>
           <button
             type="button"
+            disabled={disableCreateSession}
             onClick={() => {
               setSessionToken(undefined);
               getUrl();
@@ -249,9 +253,7 @@ function App() {
           disabled={
             !values.continueCtaRedirectionUrl ||
             !values.continueCtaTitle ||
-            !sessionToken ||
-            !values.tokenSecret ||
-            !values.tokenId
+            !sessionToken
           }
         >
           Redirect
