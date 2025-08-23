@@ -1,8 +1,13 @@
+import uuid4 from "uuid4";
 // @ts-expect-error no declaration file
 import CryptoJS from "crypto-js";
+import { useForm } from "react-hook-form";
+import { useState, type PropsWithChildren } from "react";
 
-import { useState } from "react";
 import "./App.css";
+import RefreshIcon from "./assets/refresh";
+import { TextField } from "./components/TextField";
+import { CheckboxField } from "./components/CheckboxField";
 
 const getEncryptedToken = (token: string) => {
   const key = CryptoJS.enc.Utf8.parse("aKpQzRtd"); // salt should be taken from env
@@ -19,51 +24,71 @@ const getEncryptedToken = (token: string) => {
   return encrypted?.toString();
 };
 
+const Group = ({ children }: PropsWithChildren) => (
+  <div
+    style={{ display: "flex", flexDirection: "row", gap: 12, width: "100%" }}
+  >
+    {children}
+  </div>
+);
+
+const isStaging = false;
+
+const baseURl = isStaging
+  ? "https://stage-platform-protocols.kgen.io"
+  : "https://prod-platform-protocols.kgen.io";
+
+const defaultVoucher = isStaging ? "book-my-show" : "zepto";
+
+const defaultTokens = isStaging
+  ? {
+      "x-client-id": "209cbe38-abf2-4673-8c86-f1be4942eacc",
+      "x-client-secret": "f3mm1OKppwdfd7Wtu2F8YMCwlOWOXH680kPmEzP02d",
+    }
+  : {
+      "x-client-id": "",
+      "x-client-secret": "",
+    };
+
+const storeUrl = isStaging ? "http://localhost:3001" : "http://kstore.global";
+
 function App() {
   const [open, setOpen] = useState(false);
-  const [userId, setUserId] = useState("0c63ca33-9ff9-4b5e-8f6e-0abbd4b4fe1d");
-  const [sessionToken, setSessionToken] = useState();
+  const [sessionToken, setSessionToken] = useState<string | undefined>();
 
-  const [showHeader, setShowHeader] = useState(false);
-  const [continueCtaTitle, setContinueCtaTitle] =
-    useState<string>("Continue Reading");
+  const { control, handleSubmit, setValue, watch } = useForm({
+    defaultValues: {
+      userId: "0c63ca33-9ff9-4b5e-8f6e-0abbd4b4fe1d",
+      tokenId: defaultTokens["x-client-id"],
+      tokenSecret: defaultTokens["x-client-secret"],
+      storeIdentifier: "ht-kstore-india",
+      voucher: defaultVoucher,
+      showHeader: false,
+      continueCtaTitle: "Continue Reading",
+      continueCtaRedirectionUrl: "https://www.hindustantimes.com/sports",
+      orderHistoryRedirectionUrl:
+        "https://www.hindustantimes.com/order-history",
+    },
+  });
 
-  const [continueCtaRedirectionUrl, setContinueCtaRedirectionUrl] =
-    useState<string>("https://www.hindustantimes.com/sports");
-
-  const [orderHistoryRedirectionUrl, setOrderHistoryRedirectionUrl] =
-    useState<string>("https://www.hindustantimes.com/order-history");
-
-  const getUrl = () => {
-    fetch("https://stage-platform-protocols.kgen.io/s2s/session", {
-      method: "POST",
-      headers: {
-        "x-client-id": "209cbe38-abf2-4673-8c86-f1be4942eacc",
-        "x-client-secret": "f3mm1OKppwdfd7Wtu2F8YMCwlOWOXH680kPmEzP02d",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ user_id: userId }),
-    })
-      .then((response) => response.json())
-      .then((data) => setSessionToken(getEncryptedToken(data.token)))
-      .catch((error) => console.error("Error:", error));
+  const values = watch();
+  const tokens = {
+    "x-client-id": values.tokenId,
+    "x-client-secret": values.tokenSecret,
   };
-
-  // const baseUrl = "http://localhost:3000/voucher/book-my-show";
-  const baseUrl = "https://stage.kstore.global/voucher/book-my-show";
-  const storeIdentifier = "ht-kstore-india";
+  const baseUrl = `${storeUrl}/voucher/${values.voucher}`;
 
   const params = {
-    showHeader,
-    storeIdentifier: encodeURIComponent(storeIdentifier),
-    continueCtaTitle: continueCtaTitle
-      ? encodeURIComponent(continueCtaTitle)
+    showHeader: values.showHeader,
+    storeIdentifier: encodeURIComponent(values.storeIdentifier),
+    continueCtaTitle: values.continueCtaTitle
+      ? encodeURIComponent(values.continueCtaTitle)
       : undefined,
-    continueCtaRedirectionUrl: continueCtaRedirectionUrl
-      ? encodeURIComponent(continueCtaRedirectionUrl)
+    continueCtaRedirectionUrl: values.continueCtaRedirectionUrl
+      ? encodeURIComponent(values.continueCtaRedirectionUrl)
       : undefined,
-    orderHistoryRedirectionUrl: orderHistoryRedirectionUrl
-      ? encodeURIComponent(orderHistoryRedirectionUrl)
+    orderHistoryRedirectionUrl: values.orderHistoryRedirectionUrl
+      ? encodeURIComponent(values.orderHistoryRedirectionUrl)
       : undefined,
     sessionToken: sessionToken ? encodeURIComponent(sessionToken) : undefined,
   };
@@ -77,10 +102,9 @@ function App() {
             `<span style="color: #F0E68C; font-weight: bold;">${key}</span>=${value}`
         )
         .join("&");
-
       return `<span style="color: #FFA07A; font-weight: bold;">${baseUrl}</span>?${highlightedParams}`;
     } catch {
-      return url; // return original if parsing fails
+      return url;
     }
   }
 
@@ -89,136 +113,151 @@ function App() {
       .filter(([, value]) => typeof value !== "undefined")
       .map(([key, value]) => `${key}=${value}`)
       .join("&");
-
     return `${baseUrl}?${query}`;
   }
+
+  const getUrl = (user?: string) => {
+    fetch(`${baseURl}/s2s/session`, {
+      method: "POST",
+      headers: { ...tokens, "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: user || values.userId }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("🚀 ~ getUrl ~ data:", data);
+        return setSessionToken(getEncryptedToken(data.token));
+      })
+      .catch((error) => console.error("Error:", error));
+  };
+
+  const onSetUserId = () => {
+    const user = uuid4();
+    setValue("userId", user);
+    setSessionToken(undefined);
+    getUrl(user);
+  };
 
   if (open) {
     return (
       <iframe
         src={getRedirectUrl()}
         style={{ width: "100vw", height: "100vh", border: "none" }}
+        sandbox="allow-forms allow-same-origin allow-scripts allow-popups allow-top-navigation allow-top-navigation-by-user-activation"
       />
     );
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "flex-start",
-        gap: 16,
-        width: 620,
-      }}
-    >
-      <div>
-        <input
-          onChange={(e) => {
-            setUserId(e.currentTarget.value);
-            setSessionToken(undefined);
-          }}
-          value={userId}
-          style={{
-            width: 414,
-            height: 52,
-            marginRight: 16,
-            padding: 0,
-            paddingLeft: 10,
-          }}
+    <form onSubmit={handleSubmit(() => setOpen(true))} style={formStyles}>
+      <Group>
+        <TextField
+          name="userId"
+          control={control}
+          style={userIdField}
+          containerStyle={{ marginBottom: 0 }}
         />
-        <button onClick={() => getUrl()} style={{ height: 56, width: 160 }}>
-          Create Session
-        </button>
-      </div>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          gap: 12,
-          width: "100%",
-        }}
-      >
-        <div style={groupStyle}>
-          <label style={labelStyle}>Continue CTA Title</label>
-          <input
-            type="text"
-            value={continueCtaTitle}
-            onChange={(e) => setContinueCtaTitle(e.target.value)}
-            style={inputStyle}
-          />
+        <div style={{ display: "flex", flexDirection: "row", gap: 6 }}>
+          <button
+            type="button"
+            onClick={onSetUserId}
+            style={{ height: 56, width: 56, transform: "translateY(2px)" }}
+          >
+            <RefreshIcon />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSessionToken(undefined);
+              getUrl();
+            }}
+            style={{ height: 56, width: 160, transform: "translateY(2px)" }}
+          >
+            Create Session
+          </button>
         </div>
+      </Group>
+      <Group>
+        <TextField
+          name="continueCtaTitle"
+          control={control}
+          label="Continue CTA Title"
+          style={groupStyle}
+        />
+        <TextField
+          name="continueCtaRedirectionUrl"
+          control={control}
+          label="Continue CTA Redirection URL"
+          style={groupStyle}
+        />
+        <TextField
+          name="orderHistoryRedirectionUrl"
+          control={control}
+          label="Order History Redirection Url"
+          style={groupStyle}
+        />
+      </Group>
 
-        <div style={{ ...groupStyle, flex: 2 }}>
-          <label style={labelStyle}>Continue CTA Redirection URL</label>
-          <input
-            type="text"
-            value={continueCtaRedirectionUrl}
-            onChange={(e) => setContinueCtaRedirectionUrl(e.target.value)}
-            style={inputStyle}
-          />
-        </div>
+      <Group>
+        <CheckboxField
+          name="showHeader"
+          control={control}
+          label="Show Header"
+          style={{ ...groupStyle, flex: 0, minWidth: 200 }}
+        />
+        <TextField
+          name="voucher"
+          control={control}
+          label="Voucher"
+          style={{ ...groupStyle, flex: 2 }}
+        />
+      </Group>
 
-        <div style={{ ...groupStyle, flex: 2 }}>
-          <label style={labelStyle}>Order History Redirection Url</label>
-          <input
-            type="text"
-            value={orderHistoryRedirectionUrl}
-            onChange={(e) => setOrderHistoryRedirectionUrl(e.target.value)}
-            style={inputStyle}
-          />
-        </div>
-      </div>
-
-      <div style={groupStyle}>
-        <label style={checkboxLabelStyle}>
-          <input
-            type="checkbox"
-            checked={showHeader}
-            onChange={(e) => setShowHeader(e.target.checked)}
-          />
-          Show Header
-        </label>
-      </div>
+      <Group>
+        <TextField
+          name="tokenId"
+          control={control}
+          label="Secret Token ID"
+          style={{ ...groupStyle, flex: 2 }}
+        />
+        <TextField
+          name="tokenSecret"
+          control={control}
+          label="Secret Token Secret"
+          style={{ ...groupStyle, flex: 2 }}
+        />
+        <TextField
+          name="storeIdentifier"
+          control={control}
+          label="StoreID"
+          style={{ ...groupStyle, flex: 2 }}
+        />
+      </Group>
 
       <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
         <label>Redirect URI</label>
       </div>
-
       <div
         dangerouslySetInnerHTML={{
           __html: highlightSearchParams(sessionToken || ""),
         }}
-        style={{
-          width: "150%",
-          transform: "translateX(-16.67%)",
-          padding: 10,
-          fontSize: 16,
-          justifyContent: "flex-start",
-          alignItems: "center",
-          border: "1px solid #F0E68C",
-          borderRadius: 8,
-          display: "block", // Change from inline to block
-          wordBreak: "break-all", // Break long strings like URLs
-          whiteSpace: "pre-wrap",
-          overflow: "scroll",
-          height: 300,
-        }}
+        style={redirectUriField}
       />
+
       <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
         <button
+          type="submit"
           disabled={
-            !continueCtaRedirectionUrl ||
-            !continueCtaTitle ||
-            !continueCtaTitle ||
-            !sessionToken
+            !values.continueCtaRedirectionUrl ||
+            !values.continueCtaTitle ||
+            !sessionToken ||
+            !values.tokenSecret ||
+            !values.tokenId
           }
-          onClick={() => setOpen(true)}
         >
           Redirect
         </button>
       </div>
-    </div>
+    </form>
   );
 }
 
@@ -232,22 +271,32 @@ const groupStyle = {
   justifyContent: "center",
 } as const;
 
-const labelStyle = {
-  display: "block",
-  fontSize: "14px",
-  marginBottom: "6px",
-};
-
-const inputStyle = {
-  padding: "8px",
-  fontSize: "14px",
-  border: "1px solid #ccc",
-  borderRadius: "4px",
-};
-
-const checkboxLabelStyle = {
-  fontSize: "14px",
-  display: "flex",
+const redirectUriField = {
+  padding: 10,
+  fontSize: 16,
+  justifyContent: "flex-start",
   alignItems: "center",
-  gap: "8px",
+  border: "1px solid #F0E68C",
+  borderRadius: 8,
+  display: "block",
+  wordBreak: "break-all",
+  whiteSpace: "pre-wrap",
+  overflow: "scroll",
+  height: 300,
+} as const;
+
+const userIdField = {
+  flex: 1,
+  height: 52,
+  marginRight: 16,
+  padding: 0,
+  paddingLeft: 10,
 };
+
+const formStyles = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: 16,
+  padding: 100,
+} as const;
