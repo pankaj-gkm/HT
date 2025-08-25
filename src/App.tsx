@@ -50,7 +50,9 @@ const defaultTokens = isStaging
       "x-client-secret": "",
     };
 
-const storeUrl = isStaging ? "http://localhost:3001" : "http://kstore.global";
+const storeUrl = isStaging
+  ? "https://stage.kstore.global/"
+  : "https://kstore.global";
 
 function App() {
   const [open, setOpen] = useState(false);
