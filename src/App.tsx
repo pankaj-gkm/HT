@@ -2,12 +2,19 @@ import uuid4 from "uuid4";
 // @ts-expect-error no declaration file
 import CryptoJS from "crypto-js";
 import { useForm } from "react-hook-form";
-import { useState, type PropsWithChildren } from "react";
+import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
 
 import "./App.css";
 import RefreshIcon from "./assets/refresh";
 import { TextField } from "./components/TextField";
 import { CheckboxField } from "./components/CheckboxField";
+
+const LOCALHOST_3000 = "http://localhost:3000/";
+const LOCALHOST_3001 = "http://localhost:3001/";
+const STAGE = "https://stage.kstore.global/";
+const PROD = "https://kstore.global/";
+
+console.log(LOCALHOST_3000, LOCALHOST_3001, STAGE, PROD);
 
 const getEncryptedToken = (token: string) => {
   const key = CryptoJS.enc.Utf8.parse("aKpQzRtd"); // salt should be taken from env
@@ -32,34 +39,38 @@ const Group = ({ children }: PropsWithChildren) => (
   </div>
 );
 
-const isStaging = false;
-
-const baseURl = isStaging
-  ? "https://stage-platform-protocols.kgen.io"
-  : "https://prod-platform-protocols.kgen.io";
-
-const defaultVoucher = isStaging ? "book-my-show" : "zepto";
-
-const defaultTokens = isStaging
-  ? {
-      "x-client-id": "209cbe38-abf2-4673-8c86-f1be4942eacc",
-      "x-client-secret": "f3mm1OKppwdfd7Wtu2F8YMCwlOWOXH680kPmEzP02d",
-    }
-  : {
-      "x-client-id": "",
-      "x-client-secret": "",
-    };
-
-const storeUrl = isStaging
-  ? "https://stage.kstore.global/"
-  : "https://kstore.global";
-
 function App() {
   const [open, setOpen] = useState(false);
   const [sessionToken, setSessionToken] = useState<string | undefined>();
 
-  const { control, handleSubmit, setValue, watch } = useForm({
-    defaultValues: {
+  const [isStaging, setIsStaging] = useState(() =>
+    JSON.parse(localStorage.getItem("staging") || "false")
+  );
+
+  const baseURl = isStaging
+    ? "https://stage-platform-protocols.kgen.io"
+    : "https://prod-platform-protocols.kgen.io";
+
+  const defaultVoucher = isStaging ? "book-my-show" : "makemytrip-e-pay";
+
+  const defaultTokens = useMemo(
+    () =>
+      isStaging
+        ? {
+            "x-client-id": "209cbe38-abf2-4673-8c86-f1be4942eacc",
+            "x-client-secret": "f3mm1OKppwdfd7Wtu2F8YMCwlOWOXH680kPmEzP02d",
+          }
+        : {
+            "x-client-id": "",
+            "x-client-secret": "",
+          },
+    [isStaging]
+  );
+
+  const defaultStoreUrl = isStaging ? STAGE : PROD;
+
+  const defaultValues = useMemo(
+    () => ({
       userId: "0c63ca33-9ff9-4b5e-8f6e-0abbd4b4fe1d",
       tokenId: defaultTokens["x-client-id"],
       tokenSecret: defaultTokens["x-client-secret"],
@@ -70,7 +81,14 @@ function App() {
       continueCtaRedirectionUrl: "https://www.hindustantimes.com/sports",
       orderHistoryRedirectionUrl:
         "https://www.hindustantimes.com/order-history",
-    },
+      customStoreUrl: localStorage.getItem("customStoreUrl"),
+      useCustomUrl: JSON.parse(localStorage.getItem("useCustomUrl") || "false"),
+    }),
+    [defaultTokens, defaultVoucher]
+  );
+
+  const { control, handleSubmit, setValue, watch, reset } = useForm({
+    defaultValues,
   });
 
   const values = watch();
@@ -78,6 +96,11 @@ function App() {
     "x-client-id": values.tokenId,
     "x-client-secret": values.tokenSecret,
   };
+
+  const storeUrl = values?.useCustomUrl
+    ? values.customStoreUrl
+    : defaultStoreUrl;
+
   const baseUrl = `${storeUrl}/voucher/${values.voucher}`;
 
   const params = {
@@ -94,6 +117,21 @@ function App() {
       : undefined,
     sessionToken: sessionToken ? encodeURIComponent(sessionToken) : undefined,
   };
+
+  useEffect(() => {
+    reset(defaultValues);
+    localStorage.setItem("staging", String(isStaging));
+  }, [isStaging]);
+
+  useEffect(() => {
+    localStorage.setItem("customStoreUrl", String(values.customStoreUrl));
+  }, [values.customStoreUrl]);
+
+  useEffect(() => {
+    localStorage.setItem("useCustomUrl", JSON.stringify(values.useCustomUrl));
+  });
+
+  useEffect(() => {});
 
   function highlightSearchParams(url: string): string {
     try {
@@ -146,7 +184,6 @@ function App() {
       <iframe
         src={getRedirectUrl()}
         style={{ width: "100vw", height: "100vh", border: "none" }}
-        sandbox="allow-forms allow-same-origin allow-scripts allow-popups allow-top-navigation allow-top-navigation-by-user-activation"
       />
     );
   }
@@ -208,8 +245,26 @@ function App() {
           name="showHeader"
           control={control}
           label="Show Header"
-          style={{ ...groupStyle, flex: 0, minWidth: 200 }}
+          style={{ ...groupStyle, flex: 0, minWidth: 150 }}
         />
+        <label
+          style={{
+            ...groupStyle,
+            flex: 0,
+            minWidth: 200,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={isStaging}
+            onChange={(e) => setIsStaging(e.target.checked)}
+          />
+          Is Staging
+        </label>
+
         <TextField
           name="voucher"
           control={control}
@@ -238,16 +293,21 @@ function App() {
           style={{ ...groupStyle, flex: 2 }}
         />
       </Group>
-
-      <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-        <label>Redirect URI</label>
-      </div>
-      <div
-        dangerouslySetInnerHTML={{
-          __html: highlightSearchParams(sessionToken || ""),
-        }}
-        style={redirectUriField}
-      />
+      <Group>
+        <CheckboxField
+          name="useCustomUrl"
+          control={control}
+          label="Use Custom Base URL"
+          style={{ ...groupStyle, flex: 0, minWidth: 200 }}
+        />
+        <TextField
+          name="customStoreUrl"
+          control={control}
+          label="Custom Base URL"
+          style={groupStyle}
+          disabled={!values.useCustomUrl}
+        />
+      </Group>
 
       <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
         <button
@@ -261,6 +321,18 @@ function App() {
           Redirect
         </button>
       </div>
+
+      <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+        <label>Redirect URI</label>
+      </div>
+
+      <div
+        dangerouslySetInnerHTML={{
+          __html: highlightSearchParams(sessionToken || ""),
+        }}
+        style={redirectUriField}
+        className="redirectField"
+      />
     </form>
   );
 }
@@ -286,7 +358,6 @@ const redirectUriField = {
   wordBreak: "break-all",
   whiteSpace: "pre-wrap",
   overflow: "scroll",
-  height: 300,
 } as const;
 
 const userIdField = {

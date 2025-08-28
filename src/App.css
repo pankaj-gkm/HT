@@ -1,3 +1,7 @@
+body {
+  place-items: start;
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -39,4 +43,14 @@
 
 .read-the-docs {
   color: #888;
+}
+
+.redirectField {
+  height: auto;
+  max-height: 50px;
+  transition: all 0.5s ease-in-out;
+}
+
+.redirectField:hover {
+  max-height: 1000px;
 }
