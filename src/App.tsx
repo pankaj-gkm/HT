@@ -46,6 +46,9 @@ function App() {
   const [isStaging, setIsStaging] = useState(() =>
     JSON.parse(localStorage.getItem("staging") || "false")
   );
+  const [isRkade, setisRkade] = useState(
+    !!JSON.parse(localStorage.getItem("isRkade") || "false")
+  );
 
   const baseURl = isStaging
     ? "https://stage-platform-protocols.kgen.io"
@@ -57,14 +60,18 @@ function App() {
     () =>
       isStaging
         ? {
-            "x-client-id": "209cbe38-abf2-4673-8c86-f1be4942eacc",
-            "x-client-secret": "f3mm1OKppwdfd7Wtu2F8YMCwlOWOXH680kPmEzP02d",
+            "x-client-id": isRkade
+              ? "sandbox-client-id-only-for-testing"
+              : "209cbe38-abf2-4673-8c86-f1be4942eacc",
+            "x-client-secret": isRkade
+              ? "sandbox-client-secret-only-for-testing"
+              : "f3mm1OKppwdfd7Wtu2F8YMCwlOWOXH680kPmEzP02d",
           }
         : {
             "x-client-id": "",
             "x-client-secret": "",
           },
-    [isStaging]
+    [isStaging, isRkade]
   );
 
   const defaultStoreUrl = isStaging ? STAGE : PROD;
@@ -101,7 +108,7 @@ function App() {
     ? values.customStoreUrl
     : defaultStoreUrl;
 
-  const baseUrl = `${storeUrl}/voucher/${values.voucher}`;
+  const baseUrl = `${storeUrl}`;
 
   const params = {
     showHeader: values.showHeader,
@@ -128,8 +135,13 @@ function App() {
   }, [values.customStoreUrl]);
 
   useEffect(() => {
+    reset(defaultValues);
+    localStorage.setItem("isRkade", String(isRkade));
+  }, [isRkade]);
+
+  useEffect(() => {
     localStorage.setItem("useCustomUrl", JSON.stringify(values.useCustomUrl));
-  });
+  }, [values.useCustomUrl]);
 
   useEffect(() => {});
 
@@ -183,6 +195,7 @@ function App() {
     return (
       <iframe
         src={getRedirectUrl()}
+        allow="clipboard-read; clipboard-write"
         style={{ width: "100vw", height: "100vh", border: "none" }}
       />
     );
@@ -263,6 +276,24 @@ function App() {
             onChange={(e) => setIsStaging(e.target.checked)}
           />
           Is Staging
+        </label>
+
+        <label
+          style={{
+            ...groupStyle,
+            flex: 0,
+            minWidth: 200,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={isRkade}
+            onChange={(e) => setisRkade(e.target.checked)}
+          />
+          Is Rkade
         </label>
 
         <TextField
